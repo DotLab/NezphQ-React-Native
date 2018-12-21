@@ -41,8 +41,7 @@ export default class App extends React.Component {
 			// x25519PublicKeySignature: Sign(gx1, kA)
 			this.x25519 = nacl.box.keyPair();
 			this.x25519PublicKeyBase64 = naclUtil.encodeBase64(this.x25519.publicKey);
-			const hasher = forge.md.sha256.create();
-			hasher.update(this.x25519PublicKeyBase64, "utf8");
+			const hasher = forge.md.sha256.create().update(this.x25519PublicKeyBase64, "utf8");
 			this.x25519PublicKeySignature = this.rsa.privateKey.sign(hasher);
 
 			this.aesIv = forge.random.getBytesSync(32);
@@ -67,9 +66,8 @@ export default class App extends React.Component {
 				
 				// bobRsaPublicKey: KB
 				this.bobRsaPublicKey = forge.pki.publicKeyFromPem(cred.rsaPem)
-				var hasher = forge.md.sha256.create();
-				hasher.update(cred.x25519PublicKeyBase64, "utf8");
-				var verified = this.bobRsaPublicKey.verify(hasher.digest().bytes(), cred.x25519PublicKeySignature);
+				var hash = forge.md.sha256.create().update(cred.x25519PublicKeyBase64, "utf8").digest().bytes();
+				var verified = this.bobRsaPublicKey.verify(hash, cred.x25519PublicKeySignature);
 				if (!verified) {
 					this.setState({ error: "false prophet" });
 					return Promise.reject(1);
@@ -78,9 +76,8 @@ export default class App extends React.Component {
 				// x25519SharedSecret: gx1y1
 				// aesKey: k11 = H(gx1y1)
 				this.x25519SharedSecret = nacl.box.before(naclUtil.decodeBase64(cred.x25519PublicKeyBase64), this.x25519.secretKey);
-				var hasher = forge.md.sha256.create();
-				hasher.update(naclUtil.encodeBase64(this.x25519SharedSecret), "utf8");
-				this.aesKey = hasher.digest().bytes();
+				this.aesKey = forge.md.sha256.create().update(naclUtil.encodeBase64(this.x25519SharedSecret), "utf8").digest().bytes();
+				this.hmacKey = forge.md.sha256.create().update(this.aesKey).digest().bytes();
 
 				const cipher = forge.cipher.createCipher("AES-CTR", this.aesKey);
 				cipher.start({ iv: this.aesIv });
@@ -94,6 +91,10 @@ export default class App extends React.Component {
 				const res = decipher.finish();
 				Alert.alert(decipher.output.toString());
 				
+				const hmac = forge.hmac.create();
+				hmac.start("sha256", this.hmacKey);
+				hmac.update("123");
+				hmac.update();
 			});
 			socket.on("sv_deliver", msg => {
 				Alert.alert(msg);
