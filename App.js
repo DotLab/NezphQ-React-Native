@@ -1,5 +1,8 @@
 import React from "react";
 import { View, Text, ActivityIndicator, TextInput, TouchableOpacity, Alert } from "react-native";
+import { GiftedChat } from 'react-native-gifted-chat';
+import * as Nb from 'native-base';
+
 import io from 'socket.io-client';
 
 const forge = require("node-forge");
@@ -94,8 +97,15 @@ export default class App extends React.Component {
 				const hmac = forge.hmac.create();
 				hmac.start("sha256", this.hmacKey);
 				hmac.update("123");
-				hmac.update();
+
+				this.setState({ messages: [ {
+					_id: 1,
+					text: "a secure channel has been established",
+					createdAt: new Date(),
+					system: true
+				} ] });
 			});
+
 			socket.on("sv_deliver", msg => {
 				Alert.alert(msg);
 			});
@@ -114,8 +124,16 @@ export default class App extends React.Component {
 		});
 	}
 
+	onSend(messages) {
+		console.log(messages);
+		this.setState(prevState => ({
+			messages: GiftedChat.append(prevState.messages, messages),
+		}));
+	}
+
 	render() {
 		const state = this.state;
+		
 		if (state.loading) {
 			return <View style={{ alignContent: "stretch", justifyContent: "center", height: "100%", backgroundColor: "#000" }}>
 				<Text style={{ fontSize: 25, alignSelf: "center", color: "#aaa", paddingBottom: 10 }}>{state.loading}</Text>
@@ -131,17 +149,39 @@ export default class App extends React.Component {
 				</TouchableOpacity>
 			</View>;
 		}
-		// if (state.roomId) {
-			return <View style={{ alignContent: "stretch", justifyContent: "center", height: "100%", backgroundColor: "#000" }}>
-				<Text style={{ fontSize: 25, alignSelf: "center", color: "#aaa", paddingBottom: 10 }}>i am {this.roomId}</Text>
-				<View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 10 }}>
-					<Text style={{color: "#aaa", padding: 5, fontSize: 25}}>i want </Text>
-					<TextInput style={{ padding: 5, fontSize: 25, width: 100, color: "#aaa", borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} keyboardType="decimal-pad" onChangeText={text => this.wishId = text} />
+
+		if (state.messages) {
+			return <Nb.Container style={{ flex: 1 }}>
+				<Nb.Header>
+					<Nb.Left>
+						<Nb.Button transparent>
+							<Nb.Icon type="AntDesign" name="close" />
+						</Nb.Button>
+					</Nb.Left>
+					<Nb.Body>
+						<Nb.Title>sinner</Nb.Title>
+					</Nb.Body>
+					<Nb.Right />
+				</Nb.Header>
+				<View style={{ flex: 1 }}>
+					<GiftedChat
+						messages={state.messages} 
+						onSend={this.onSend.bind(this)} 
+						user={{ _id: 1 }}
+					/>
 				</View>
-				<TouchableOpacity style={{ alignSelf: "center", padding: 5, width: 120, borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} onPress={this.onConnectButtonPress.bind(this)}>
-					<Text style={{ alignSelf: "center", color: "#aaa", fontSize: 25 }}>pray</Text>
-				</TouchableOpacity>
-			</View>;
-		// }
+			</Nb.Container>
+		}
+
+		return <View style={{ alignContent: "stretch", justifyContent: "center", height: "100%", backgroundColor: "#000" }}>
+			<Text style={{ fontSize: 25, alignSelf: "center", color: "#aaa", paddingBottom: 10 }}>i am {this.roomId}</Text>
+			<View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 10 }}>
+				<Text style={{color: "#aaa", padding: 5, fontSize: 25}}>i want </Text>
+				<TextInput style={{ padding: 5, fontSize: 25, width: 100, color: "#aaa", borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} keyboardType="decimal-pad" onChangeText={text => this.wishId = text} />
+			</View>
+			<TouchableOpacity style={{ alignSelf: "center", padding: 5, width: 120, borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} onPress={this.onConnectButtonPress.bind(this)}>
+				<Text style={{ alignSelf: "center", color: "#aaa", fontSize: 25 }}>pray</Text>
+			</TouchableOpacity>
+		</View>;
 	}
 }

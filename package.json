@@ -9,6 +9,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "native-base": "^2.9.3",
     "node-forge": "^0.7.6",
     "react": "16.6.3",
     "react-native": "0.57.8",
