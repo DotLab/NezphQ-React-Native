@@ -1,0 +1,29 @@
+{
+  "name": "NezphQ",
+  "version": "1.0.0",
+  "description": "",
+  "author": "Kailang Fu",
+  "license": "CC-BY-NC-SA-4.0",
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "node-forge": "^0.7.6",
+    "react": "16.6.3",
+    "react-native": "0.57.8",
+    "react-native-gifted-chat": "^0.5.0",
+    "socket.io-client": "^2.2.0",
+    "tweetnacl": "^1.0.0",
+    "tweetnacl-util": "^0.15.0"
+  },
+  "devDependencies": {
+    "babel-jest": "23.6.0",
+    "jest": "23.6.0",
+    "metro-react-native-babel-preset": "0.51.0",
+    "react-test-renderer": "16.6.3"
+  },
+  "jest": {
+    "preset": "react-native"
+  }
+}
