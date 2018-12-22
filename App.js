@@ -7,7 +7,6 @@ import io from 'socket.io-client';
 
 const forge = require("node-forge");
 const nacl = require('tweetnacl');
-const naclUtil = require('tweetnacl-util');
 
 export default class App extends React.Component {
 	constructor() {
@@ -43,7 +42,9 @@ export default class App extends React.Component {
 			// x25519.publicKey: gx1
 			// x25519PublicKeySignature: Sign(gx1, kA)
 			this.x25519 = nacl.box.keyPair();
-			this.x25519PublicKeyBase64 = naclUtil.encodeBase64(this.x25519.publicKey);
+			this.x25519PublicKeyBase64 = forge.util.binary.base64.encode(this.x25519.publicKey);
+				// forge.util.encode64(new forge.util.ByteStringBuffer(this.x25519.publicKey).bytes());
+				// naclUtil.encodeBase64(this.x25519.publicKey);
 			const hasher = forge.md.sha256.create().update(this.x25519PublicKeyBase64, "utf8");
 			this.x25519PublicKeySignature = this.rsa.privateKey.sign(hasher);
 
@@ -78,8 +79,16 @@ export default class App extends React.Component {
 
 				// x25519SharedSecret: gx1y1
 				// aesKey: k11 = H(gx1y1)
-				this.x25519SharedSecret = nacl.box.before(naclUtil.decodeBase64(cred.x25519PublicKeyBase64), this.x25519.secretKey);
-				this.aesKey = forge.md.sha256.create().update(naclUtil.encodeBase64(this.x25519SharedSecret), "utf8").digest().bytes();
+				this.x25519SharedSecret = nacl.box.before(
+					forge.util.binary.base64.decode(cred.x25519PublicKeyBase64),
+					// forge.util.decode64(new forge.util.ByteStringBuffer(cred.x25519PublicKeyBase64).bytes()),
+					this.x25519.secretKey);
+					// naclUtil.decodeBase64(cred.x25519PublicKeyBase64), this.x25519.secretKey);
+				this.aesKey = forge.md.sha256.create().update(
+					forge.util.binary.base64.encode(this.x25519SharedSecret),
+					// forge.util.encode64(new forge.util.ByteStringBuffer(this.x25519SharedSecret).bytes()), 
+					"utf8").digest().bytes();
+					// naclUtil.encodeBase64(this.x25519SharedSecret), "utf8").digest().bytes();
 				this.hmacKey = forge.md.sha256.create().update(this.aesKey).digest().bytes();
 
 				const cipher = forge.cipher.createCipher("AES-CTR", this.aesKey);
