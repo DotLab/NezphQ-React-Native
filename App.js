@@ -13,10 +13,14 @@ const encode = forge.util.binary.raw.encode;
 const decode = forge.util.binary.raw.decode;
 const sha256 = forge.md.sha256.create;
 
+const generateMessageId = () => Math.round(Math.random() * 1000000);
+
+// 
+
 export default class App extends React.Component {
 	constructor() {
 		super();
-		this.state = { loading: ":nezph q:" };
+		this.state = { loading: ":nezph q:", messages: [] };
 	}
 
 	componentDidMount() {
@@ -53,7 +57,7 @@ export default class App extends React.Component {
 		this.setState({ loading: "connecting" });
 		
 		this.socket = io("http://localhost:6021");
-		this.socket.on("disconnect", () => { this.setState({ error: "broken pipe" }); })
+		this.socket.on("disconnect", () => { this.setState({ error: "broken pipe", messages: [] }); })
 		
 		new Promise(resolve => {
 			this.socket.on("connect", resolve);
@@ -83,17 +87,17 @@ export default class App extends React.Component {
 			socket.on("sv_deliver", this.onSocketSvDeliver.bind(this));
 		}).catch(err => {
 			Alert.alert(err.message);
-			if (err !== 1) throw err;
+			throw err;
 		});
 	}
 
 	onConnectButtonPress() {
 		var wishId = Math.round(parseInt(this.wishId));
 		if (wishId.toString() === "NaN") return;
-		this.socket.emit("cl_connect_to", wishId, ret => {
-			if (ret === 0) {
 
-			}
+		this.setState({ loading: "praying" });
+		this.socket.emit("cl_connect_to", wishId, ret => {
+			if (ret !== 0) this.setState({ loading: undefined });
 		});
 	}
 
@@ -106,21 +110,18 @@ export default class App extends React.Component {
 			this.setState({ error: "false prophet" });
 			return Promise.reject(1);
 		}
+		this.bobX25519PublicKey = cred.x25519PublicKey;
 		this.bobAesIv = cred.aesIv;
 
-		// x25519SharedSecret: gx1y1
-		// aesKey: k11 = H(gx1y1)
-		// hmacKey: H(k11)
-		const x25519SharedSecret = nacl.box.before(decode(cred.x25519PublicKey), this.x25519.secretKey);
-		this.aesKey = sha256().update(encode(x25519SharedSecret), "raw").digest().bytes();
-		this.hmacKey = sha256().update(this.aesKey).digest().bytes();
-
-		this.setState({ messages: [ {
-			_id: 1,
-			text: "a secure channel has been established",
-			createdAt: new Date(),
-			system: true
-		} ] });
+		this.setState(prevState => ({
+			loading: undefined,
+			messages: GiftedChat.append(prevState.messages, {
+				_id: generateMessageId(),
+				text: "a secure channel has been established",
+				createdAt: new Date(),
+				system: true
+			}),
+		}));
 	}
 
 	onSendButtonPress(messages) {
@@ -130,6 +131,14 @@ export default class App extends React.Component {
 		new Promise(resolve => {
 			setTimeout(() => {
 				this.setState({ title: "sending..." });
+				
+				// calculate keys
+				// x25519SharedSecret: gxiyj
+				// aesKey: kij = H(gxiyj)
+				// hmacKey: H(kij)
+				const x25519SharedSecret = nacl.box.before(decode(this.bobX25519PublicKey), this.x25519.secretKey);
+				const sharedAesKey = sha256().update(encode(x25519SharedSecret), "raw").digest().bytes();
+				const sharedHmacKey = sha256().update(sharedAesKey).digest().bytes();
 
 				// next x25519 pair
 				// x25519PublicKey: gxi+1
@@ -138,20 +147,28 @@ export default class App extends React.Component {
 
 				// encryption
 				// ciphertext: E(M,kij)
-				const cipher = forge.cipher.createCipher("AES-CTR", this.aesKey);
+				const cipher = forge.cipher.createCipher("AES-CTR", sharedAesKey);
 				cipher.start({ iv: this.aesIv });
 				cipher.update(forge.util.createBuffer(text, "utf8"));
 				cipher.finish();
 				const ciphertext = cipher.output.bytes();
 				
+				// new aesIv
+				const aesIv = forge.random.getBytesSync(32);
+
 				// mac = MAC({gxi+1,E(M,kij)},H(kij))
 				const hasher = forge.hmac.create();
-				hasher.start("sha256", this.hmacKey);
+				hasher.start("sha256", sharedHmacKey);
 				hasher.update(x25519PublicKey);
 				hasher.update(ciphertext);
+				hasher.update(aesIv);
 				const mac = hasher.getMac().bytes();
 
-				this.socket.emit("cl_send", { x25519PublicKey, ciphertext, mac }, resolve);
+				this.socket.emit("cl_send", { x25519PublicKey, ciphertext, aesIv, mac }, resolve);
+
+				// update local x25519
+				this.x25519 = x25519;
+				this.aesIv = aesIv;
 			}, 0);
 		}).then(() => {
 			this.setState(prevState => ({
@@ -162,29 +179,46 @@ export default class App extends React.Component {
 	}
 
 	processMessage(msg) {
-		var text = "[damaged]";
+		// calculate keys
+		// x25519SharedSecret: gxiyj
+		// aesKey: kij = H(gxiyj)
+		// hmacKey: H(kij)
+		const x25519SharedSecret = nacl.box.before(decode(this.bobX25519PublicKey), this.x25519.secretKey);
+		const sharedAesKey = sha256().update(encode(x25519SharedSecret), "raw").digest().bytes();
+		const sharedHmacKey = sha256().update(sharedAesKey).digest().bytes();
 
 		const hasher = forge.hmac.create();
-		hasher.start("sha256", this.hmacKey);
+		hasher.start("sha256", sharedHmacKey);
 		hasher.update(msg.x25519PublicKey);
 		hasher.update(msg.ciphertext);
+		hasher.update(msg.aesIv);
 		const mac = hasher.getMac().bytes();
-		if (mac !== msg.mac) return text;
+		if (mac !== msg.mac) return undefined;
 
-		const decipher = forge.cipher.createDecipher("AES-CTR", this.aesKey);
+		const decipher = forge.cipher.createDecipher("AES-CTR", sharedAesKey);
 		decipher.start({ iv: this.bobAesIv });
 		decipher.update(forge.util.createBuffer(msg.ciphertext, "raw"));
 		const res = decipher.finish();
-		if (!res) return text;
+		if (!res) return undefined;
+
+		this.bobX25519PublicKey = msg.x25519PublicKey;
+		this.bobAesIv = msg.aesIv;
 
 		return decipher.output.toString();
 	}
 
 	onSocketSvDeliver(msg) {
-		text = this. processMessage(msg);
+		text = this.processMessage(msg);
+		if (text === undefined) {
+			text = "[damaged]";
+			this.socket.emit("cl_recheck", {
+				
+			});
+		}
+
 		this.setState(prevState => ({
 			messages: GiftedChat.append(prevState.messages, {
-				_id: Math.round(Math.random() * 1000000),
+				_id: generateMessageId(),
 				text,
 				createdAt: new Date(),
 				user: { _id: 2, name: 'sinner' },
@@ -211,7 +245,7 @@ export default class App extends React.Component {
 			</View>;
 		}
 
-		if (state.messages) {
+		if (state.messages.length > 0) {
 			return <Nb.Container style={{ flex: 1 }}>
 				<Nb.Header>
 					<Nb.Left>
