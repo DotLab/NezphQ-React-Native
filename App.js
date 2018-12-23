@@ -5,6 +5,7 @@ import * as Nb from 'native-base';
 
 import io from 'socket.io-client';
 
+import { generateSecureRandom } from 'react-native-securerandom';
 const forge = require("node-forge");
 const nacl = require('tweetnacl');
 
@@ -15,13 +16,23 @@ export default class App extends React.Component {
 	}
 
 	componentDidMount() {
-		new Promise((resolve, reject) => {
-			setTimeout(() => {
-				forge.pki.rsa.generateKeyPair(512, 0x10001, (err, rsa) => {
-					if (err) return reject(err);
-					resolve(rsa);
-				});
-			}, 0);
+		generateSecureRandom(2048).then(randomBytes => {
+			forge.random.collect(forge.util.binary.raw.encode(randomBytes));
+			nacl.setPRNG((x, n) => {
+				const str = forge.random.getBytesSync(n);
+				for (var i = 0; i < n; i += 1) {
+					x[i] = str.charCodeAt(i);
+				}
+			});
+
+			return new Promise((resolve, reject) => {
+				setTimeout(() => {
+					forge.pki.rsa.generateKeyPair(512, 0x10001, (err, rsa) => {
+						if (err) return reject(err);
+						resolve(rsa);
+					});
+				}, 0);
+			});
 		}).then(rsa => {
 			// rsa.privateKey: kA
 			// rsa.publicKey: KA
@@ -32,7 +43,7 @@ export default class App extends React.Component {
 
 	onReconnectButtonPress() {
 		this.setState({ loading: "connecting" });
-		this.socket = io("http://10.0.2.2:3000");
+		this.socket = io("http://localhost:6021");
 		this.socket.on("disconnect", () => {
 			this.setState({ error: "broken pipe" });
 		})
