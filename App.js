@@ -226,6 +226,12 @@ export default class App extends React.Component {
 		}));
 	}
 
+	onStopButtonPress() {
+		this.socket.disconnect();
+		this.setState({ messages: [] });
+		this.onReconnectButtonPress();
+	}
+
 	render() {
 		const state = this.state;
 		
@@ -249,7 +255,7 @@ export default class App extends React.Component {
 			return <Nb.Container style={{ flex: 1 }}>
 				<Nb.Header>
 					<Nb.Left>
-						<Nb.Button transparent>
+						<Nb.Button transparent onPress={this.onStopButtonPress.bind(this)}>
 							<Nb.Icon type="AntDesign" name="close" />
 						</Nb.Button>
 					</Nb.Left>
