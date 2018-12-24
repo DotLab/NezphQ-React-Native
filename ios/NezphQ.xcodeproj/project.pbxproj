@@ -1268,11 +1268,11 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NezphQ.app/NezphQ";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Debug;
@@ -1294,11 +1294,11 @@
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NezphQ.app/NezphQ";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Release;
@@ -1321,7 +1321,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Debug;
@@ -1343,7 +1343,7 @@
 				VERSIONING_SYSTEM = "apple-generic";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Release;
@@ -1373,11 +1373,11 @@
 				TVOS_DEPLOYMENT_TARGET = 9.2;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Debug;
@@ -1407,11 +1407,11 @@
 				TVOS_DEPLOYMENT_TARGET = 9.2;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Release;
@@ -1440,11 +1440,11 @@
 				TVOS_DEPLOYMENT_TARGET = 10.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Debug;
@@ -1473,11 +1473,11 @@
 				TVOS_DEPLOYMENT_TARGET = 10.1;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/$(TARGET_NAME)\"",
+					"$(SRCROOT)/$(TARGET_NAME)",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					"$(SRCROOT)\..\node_modules\react-native-securerandom\ios",
+					"$(SRCROOT)/../node_modules/react-native-securerandom/ios",
 				);
 			};
 			name = Release;
