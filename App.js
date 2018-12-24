@@ -15,12 +15,10 @@ const sha256 = forge.md.sha256.create;
 
 const generateMessageId = () => Math.round(Math.random() * 1000000);
 
-// 
-
 export default class App extends React.Component {
 	constructor() {
 		super();
-		this.state = { loading: ":nezph q:", messages: [] };
+		this.state = { messages: [] };
 	}
 
 	componentDidMount() {
@@ -55,9 +53,10 @@ export default class App extends React.Component {
 
 	onReconnectButtonPress() {
 		this.setState({ loading: "connecting" });
-		
-		this.socket = io("http://localhost:6021");
-		this.socket.on("disconnect", () => { this.setState({ error: "broken pipe", messages: [] }); })
+		this.socket = io("https://q.nezph.com");
+		this.socket.on("connect_failed", () => { this.setState({ error: "connect failed", loading: undefined, messages: [] }); })
+		this.socket.on("disconnect", () => { this.setState({ error: "broken pipe", loading: undefined, messages: [] }); })
+		this.socket.on("error", () => { this.setState({ error: "error", loading: undefined, messages: [] }); })
 		
 		new Promise(resolve => {
 			this.socket.on("connect", resolve);
