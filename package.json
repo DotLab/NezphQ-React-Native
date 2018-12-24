@@ -5,9 +5,9 @@
   "author": "Kailang Fu",
   "license": "CC-BY-NC-SA-4.0",
   "scripts": {
-    "android": "react-native run-android",
     "start": "node node_modules/react-native/local-cli/cli.js start",
-    "test": "jest"
+    "test": "jest",
+    "postversion": "react-native-version"
   },
   "dependencies": {
     "native-base": "^2.9.3",
@@ -23,6 +23,7 @@
     "babel-jest": "23.6.0",
     "jest": "23.6.0",
     "metro-react-native-babel-preset": "0.51.0",
+    "react-native-version": "^2.6.6",
     "react-test-renderer": "16.6.3"
   },
   "jest": {
