@@ -23,9 +23,17 @@ export default class App extends React.Component {
 
 	componentDidMount() {
 		this.setState({ loading: "finding entropy" });
+
 		// feed entropy
-		generateSecureRandom(4089).then(randomBytes => {
+		generateSecureRandom(32767).then(randomBytes => {
 			forge.random.collect(encode(randomBytes));
+			setInterval(() => {  // re-feed entropy constantly
+				generateSecureRandom(1024).then(randomBytes => {
+					this.entropyHex = forge.util.binary.hex.encode(randomBytes).substr(0, 256);
+					forge.random.collect(encode(randomBytes));
+				});
+			}, 5000);
+
 			nacl.setPRNG((x, n) => {
 				const str = forge.random.getBytesSync(n);
 				for (var i = 0; i < n; i += 1) {
@@ -37,7 +45,7 @@ export default class App extends React.Component {
 			this.setState({ loading: "generating key" });
 			return new Promise((resolve, reject) => {
 				setTimeout(() => {
-					forge.pki.rsa.generateKeyPair(512, 0x10001, (err, rsa) => {
+					forge.pki.rsa.generateKeyPair({ bits: 1024, workers: -1 }, (err, rsa) => {
 						if (err) return reject(err);
 						resolve(rsa);
 					});
@@ -47,6 +55,7 @@ export default class App extends React.Component {
 			// rsa.privateKey: kA
 			// rsa.publicKey: KA
 			this.rsa = rsa;
+			this.rsaPublicKeyHex = rsa.publicKey.n.toString(16);
 			this.onReconnectButtonPress();
 		});
 	}
@@ -72,7 +81,7 @@ export default class App extends React.Component {
 			this.setState({ loading: "handshaking", error: undefined });			
 			return new Promise(resolve => {
 				this.socket.emit("cl_handshake", { 
-					rsaPem: forge.pki.publicKeyToPem(this.rsa.publicKey),  // KA 
+					rsaPem: forge.pki.publicKeyToPem(this.rsa.publicKey),  // KA
 					x25519PublicKey, x25519PublicKeySignature,
 					aesIv: this.aesIv
 				}, resolve);
@@ -273,15 +282,21 @@ export default class App extends React.Component {
 			</Nb.Container>
 		}
 
-		return <View style={{ alignContent: "stretch", justifyContent: "center", height: "100%", backgroundColor: "#000" }}>
-			<Text style={{ fontSize: 25, alignSelf: "center", color: "#aaa", paddingBottom: 10 }}>i am {this.roomId}</Text>
-			<View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 10 }}>
-				<Text style={{color: "#aaa", padding: 5, fontSize: 25}}>i want </Text>
-				<TextInput style={{ padding: 5, fontSize: 25, width: 100, color: "#aaa", borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} keyboardType="decimal-pad" onChangeText={text => this.wishId = text} />
+		return <View style={{ backgroundColor: "#000" }}>
+			<View style={{ position: "absolute" }}>
+				<Text style={{ color: "#888", fontSize: 10 }}>rsaPublicKey: {this.rsaPublicKeyHex}</Text>
+				<Text style={{ color: "#888", fontSize: 10 }}>entropy: {this.entropyHex}</Text>
 			</View>
-			<TouchableOpacity style={{ alignSelf: "center", padding: 5, width: 120, borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} onPress={this.onConnectButtonPress.bind(this)}>
-				<Text style={{ alignSelf: "center", color: "#aaa", fontSize: 25 }}>pray</Text>
-			</TouchableOpacity>
+			<View style={{ alignContent: "stretch", justifyContent: "center", height: "100%" }}>
+				<Text style={{ fontSize: 25, alignSelf: "center", color: "#aaa", paddingBottom: 10 }}>i am {this.roomId}</Text>
+				<View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 10 }}>
+					<Text style={{color: "#aaa", padding: 5, fontSize: 25}}>i want </Text>
+					<TextInput style={{ padding: 5, fontSize: 25, width: 100, color: "#aaa", borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} keyboardType="decimal-pad" onChangeText={text => this.wishId = text} />
+				</View>
+				<TouchableOpacity style={{ alignSelf: "center", padding: 5, width: 120, borderWidth: 1, borderColor: "#aaa", borderRadius: 5 }} onPress={this.onConnectButtonPress.bind(this)}>
+					<Text style={{ alignSelf: "center", color: "#aaa", fontSize: 25 }}>pray</Text>
+				</TouchableOpacity>
+			</View>
 		</View>;
 	}
 }

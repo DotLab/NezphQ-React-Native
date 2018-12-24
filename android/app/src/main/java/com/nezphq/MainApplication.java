@@ -1,4 +1,4 @@
-package com.nezphq;
+package com.nezphere.q;
 
 import android.app.Application;
 
