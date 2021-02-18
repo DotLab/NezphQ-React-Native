@@ -1,30 +1,34 @@
 {
-  "name": "NezphQ",
-  "version": "1.0.2",
-  "description": "",
-  "author": "Kailang Fu",
-  "license": "CC-BY-NC-SA-4.0",
+  "name": "OffTheRecord",
+  "version": "0.0.1",
+  "private": true,
   "scripts": {
-    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
     "test": "jest",
-    "postversion": "react-native-version"
+    "lint": "eslint ."
   },
   "dependencies": {
-    "native-base": "^2.9.3",
-    "node-forge": "^0.7.6",
-    "react": "16.6.3",
-    "react-native": "0.57.8",
-    "react-native-gifted-chat": "^0.5.0",
-    "react-native-securerandom": "^0.3.0",
-    "socket.io-client": "^2.2.0",
-    "tweetnacl": "^1.0.0"
+    "native-base": "^2.15.2",
+    "node-forge": "^0.10.0",
+    "react": "16.13.1",
+    "react-native": "0.63.4",
+    "react-native-gifted-chat": "^0.16.3",
+    "react-native-image-picker": "^3.2.1",
+    "react-native-securerandom": "^1.0.0",
+    "socket.io-client": "^3.1.1",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
-    "babel-jest": "23.6.0",
-    "jest": "23.6.0",
-    "metro-react-native-babel-preset": "0.51.0",
-    "react-native-version": "^2.6.6",
-    "react-test-renderer": "16.6.3"
+    "@babel/core": "7.12.13",
+    "@babel/runtime": "7.12.13",
+    "@react-native-community/eslint-config": "1.1.0",
+    "babel-jest": "25.5.1",
+    "eslint": "6.8.0",
+    "jest": "25.5.4",
+    "metro-react-native-babel-preset": "0.59.0",
+    "react-test-renderer": "16.13.1"
   },
   "jest": {
     "preset": "react-native"
