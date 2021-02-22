@@ -19,13 +19,6 @@ target 'OffTheRecord' do
 
   use_react_native!(:path => config["reactNativePath"])
 
-  permissions_path = '../node_modules/react-native-permissions/ios'
- 
-  pod 'Permission-MediaLibrary', :path => "#{permissions_path}/MediaLibrary"
-  pod 'Permission-Microphone', :path => "#{permissions_path}/Microphone"
-  pod 'Permission-PhotoLibrary', :path => "#{permissions_path}/PhotoLibrary"
- 
-
   target 'OffTheRecordTests' do
     inherit! :complete
     # Pods for testing

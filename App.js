@@ -3,7 +3,6 @@ import { View, Text, ActivityIndicator, Platform, TextInput, TouchableOpacity, A
 import { GiftedChat, Actions, Send, Bubble } from 'react-native-gifted-chat';
 import { launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/FontAwesome';
-import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import AudioRecord from 'react-native-audio-record';
 import Sound from 'react-native-sound';
 import { Buffer } from 'buffer';
@@ -276,7 +275,7 @@ export default class App extends React.Component {
     } else if (msg.isAudio) {
       const messageId = generateMessageId();
       try {
-        await RNFS.writeFile(RNFS.DocumentDirectoryPath + `msg-${messageId}.wav`, text, 'base64');
+        await RNFS.writeFile(RNFS.DocumentDirectoryPath + `/msg-${messageId}.wav`, text, 'base64');
       } catch (e) {
         console.log(e);
       }
@@ -360,12 +359,6 @@ export default class App extends React.Component {
   }
 
   renderMessageAudio(props) {
-
-    console.log(props.currentMessage);
-    // const messageId = props.currentMessage._id;
-    // const audio = props.currentMessage.audio;
-    // 
-
     // // sound.play()
     return <Icon type="FontAwesome" name="play" size={28}
       onPress={() => {
@@ -373,13 +366,17 @@ export default class App extends React.Component {
           if (e) {
             console.log(e)
           }
-          sound.play()
+          sound.play(success => {
+            console.log(success, "success play");
+            if (!success) {
+              Alert.alert("There was an error playing this audio");
+            }
+          });
         })
       }}
     />
-
-
   }
+
 
   renderAudioRecording(props) {
     return <View style={{ marginRight: 10, flexDirection: 'row' }}>
@@ -460,8 +457,15 @@ export default class App extends React.Component {
 
   async sendRecording() {
     this.setState({ isRecording: false, previewRecording: false });
+    const messageId = generateMessageId();
+    const path = RNFS.DocumentDirectoryPath + `/msg-${messageId}.wav`;
+    await RNFS.copyFile(this.state.recording, path);
+
+    const file = await RNFS.readFile(path, { encoding: 'base64' });
+    console.log(file.substring(0, 40));
+
     this.onSendButtonPress([{
-      audio: this.state.recording,
+      audio: path,
       user: { _id: 1 },
       _id: parseInt(Math.random() * 1000),
     }]);
@@ -507,6 +511,7 @@ export default class App extends React.Component {
             renderActions={this.renderActions.bind(this)}
             renderSend={this.renderAudioRecording.bind(this)}
             renderMessageAudio={this.renderMessageAudio.bind(this)}
+            // renderBubble={this.renderBubble}
             user={{ _id: 1 }}
           />
         </View>
