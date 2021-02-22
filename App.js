@@ -1,6 +1,14 @@
 import React from "react";
-import { View, Text, ActivityIndicator, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { GiftedChat } from 'react-native-gifted-chat';
+import { View, Text, ActivityIndicator, Platform, TextInput, TouchableOpacity, Alert, Image, TouchableWithoutFeedback } from 'react-native';
+import { GiftedChat, Actions, Send, Bubble } from 'react-native-gifted-chat';
+import { launchImageLibrary } from 'react-native-image-picker';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import AudioRecorderPlayer from 'react-native-audio-recorder-player';
+import AudioRecord from 'react-native-audio-record';
+import Sound from 'react-native-sound';
+import { Buffer } from 'buffer';
+
+import RNFS from 'react-native-fs'
 import * as Nb from 'native-base';
 
 import io from 'socket.io-client';
@@ -15,13 +23,30 @@ const sha256 = forge.md.sha256.create;
 
 const generateMessageId = () => Math.round(Math.random() * 1000000);
 
+const options = {
+  audioSource: 6,     // android only (see below)
+};
+
 export default class App extends React.Component {
   constructor() {
     super();
-    this.state = { messages: [] };
+    this.state = {
+      messages: [],
+      recording: null,
+      isRecording: false,
+      previewRecording: false,
+    };
+    this.recordingId = 0;
   }
 
-  componentDidMount() {
+  async componentDidMount() {
+    AudioRecord.init(options);
+    AudioRecord.on('data', data => {
+      const chunk = Buffer.from(data, 'base64');
+      console.log('chunk size', chunk.byteLength);
+      // do something with audio chunk
+    });
+
     this.setState({ loading: "finding entropy" });
 
     // feed entropy
@@ -135,9 +160,20 @@ export default class App extends React.Component {
     }));
   }
 
-  onSendButtonPress(messages) {
-    if (!messages || !messages[0] || !messages[0].text) return;
-    const text = messages[0].text;
+  async onSendButtonPress(messages) {
+    console.log(messages)
+    if (!messages || !messages[0]) return;
+    let text;
+    if (messages[0].image) {
+      text = await RNFS.readFile(messages[0].image, { encoding: 'base64' });
+    } else if (messages[0].audio) {
+      text = await RNFS.readFile(messages[0].audio, { encoding: 'base64' });
+    } else {
+      text = messages[0].text;
+    }
+
+    const isImage = messages[0].image ? true : false;
+    const isAudio = messages[0].audio ? true : false;
 
     new Promise(resolve => {
       setTimeout(() => {
@@ -175,7 +211,7 @@ export default class App extends React.Component {
         hasher.update(aesIv);
         const mac = hasher.getMac().bytes();
 
-        this.socket.emit("cl_send", { x25519PublicKey, ciphertext, aesIv, mac }, resolve);
+        this.socket.emit("cl_send", { x25519PublicKey, ciphertext, aesIv, mac, isImage, isAudio }, resolve);
 
         // update local x25519
         this.x25519 = x25519;
@@ -218,8 +254,9 @@ export default class App extends React.Component {
     return decipher.output.toString();
   }
 
-  onSocketSvDeliver(msg) {
-    text = this.processMessage(msg);
+  async onSocketSvDeliver(msg) {
+    const text = this.processMessage(msg);
+    console.log(text.substring(0, 10));
     if (text === undefined) {
       text = "[damaged]";
       this.socket.emit("cl_recheck", {
@@ -227,20 +264,208 @@ export default class App extends React.Component {
       });
     }
 
-    this.setState(prevState => ({
-      messages: GiftedChat.append(prevState.messages, {
-        _id: generateMessageId(),
-        text,
-        createdAt: new Date(),
-        user: { _id: 2, name: 'sinner' },
-      }),
-    }));
+    if (msg.isImage) {
+      this.setState(prevState => ({
+        messages: GiftedChat.append(prevState.messages, {
+          _id: generateMessageId(),
+          image: "data:image/png;base64," + text,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'sinner' },
+        }),
+      }));
+    } else if (msg.isAudio) {
+      const messageId = generateMessageId();
+      try {
+        await RNFS.writeFile(RNFS.DocumentDirectoryPath + `msg-${messageId}.wav`, text, 'base64');
+      } catch (e) {
+        console.log(e);
+      }
+
+      this.setState(prevState => ({
+        messages: GiftedChat.append(prevState.messages, {
+          _id: messageId,
+          audio: RNFS.DocumentDirectoryPath + `/msg-${messageId}.wav`,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'sinner' },
+        }),
+      }));
+    } else {
+      this.setState(prevState => ({
+        messages: GiftedChat.append(prevState.messages, {
+          _id: generateMessageId(),
+          text,
+          createdAt: new Date(),
+          user: { _id: 2, name: 'sinner' },
+        }),
+      }));
+    }
+
   }
 
   onStopButtonPress() {
     this.socket.disconnect();
     this.setState({ messages: [] });
     this.onReconnectButtonPress();
+  }
+
+  selectPhoto() {
+    console.log('selecting pitcres')
+    let options = {
+      title: 'You can choose one image',
+      maxWidth: 256,
+      maxHeight: 256,
+      storageOptions: {
+        skipBackup: true
+      }
+    };
+
+    launchImageLibrary(options, res => {
+      if (res.didCancel) {
+        console.log('User cancelled photo picker');
+        Alert.alert('You did not select any image');
+      } else if (res.error) {
+        console.log('ImagePicker Error: ', res.error);
+      } else if (res.customButton) {
+        console.log('User tapped custom button: ', res.customButton);
+      } else {
+        uri = res.uri;
+        console.log(res.uri);
+        this.setState({ uri: res.uri });
+
+        this.onSendButtonPress([{
+          image: uri,
+          user: { _id: 1 },
+          _id: parseInt(Math.random() * 1000),
+        }]);
+      }
+    });
+  }
+
+  renderActions() {
+    return <View style={{ marginLeft: 10 }}>
+      {!this.state.isRecording && !this.state.previewRecording &&
+        <TouchableOpacity onPress={this.selectPhoto.bind(this)}>
+          <Icon type="EvilIcons" name="image" size={26} />
+        </TouchableOpacity>
+      }
+
+      {this.state.previewRecording &&
+        <TouchableOpacity style={{ marginRight: 20 }}
+          onPress={this.deleteRecording.bind(this)}>
+          <Icon type="FontAwesome" name="trash" size={28} />
+        </TouchableOpacity>
+      }
+    </View>
+
+  }
+
+  renderMessageAudio(props) {
+
+    console.log(props.currentMessage);
+    // const messageId = props.currentMessage._id;
+    // const audio = props.currentMessage.audio;
+    // 
+
+    // // sound.play()
+    return <Icon type="FontAwesome" name="play" size={28}
+      onPress={() => {
+        const sound = new Sound(props.currentMessage.audio, '', e => {
+          if (e) {
+            console.log(e)
+          }
+          sound.play()
+        })
+      }}
+    />
+
+
+  }
+
+  renderAudioRecording(props) {
+    return <View style={{ marginRight: 10, flexDirection: 'row' }}>
+      <Send
+        {...props}
+      />
+      {/* {!props.text && this.state.recording &&
+        <TouchableOpacity style={{ marginRight: 20 }}
+          onPress={this.deleteFile.bind(this)}>
+          <Icon type="FontAwesome" name="trash" size={28} />
+        </TouchableOpacity>
+      } */}
+      {!props.text && this.state.previewRecording &&
+        <TouchableOpacity style={{ marginRight: 20 }}
+          onPress={this.sendRecording.bind(this)}>
+          <Icon type="FontAwesome" name="send" size={28} />
+        </TouchableOpacity>
+      }
+      {!props.text && this.state.previewRecording &&
+        <TouchableOpacity
+          onPress={this.startPlay.bind(this)}>
+          <Icon type="FontAwesome" name="play" size={28} />
+        </TouchableOpacity>
+      }
+
+      {!props.text && !this.state.previewRecording &&
+        <TouchableWithoutFeedback
+          onPressIn={this.startRecording.bind(this)}
+          onPressOut={this.stopRecording.bind(this)}>
+          <Icon type="FontAwesome" name="microphone" size={28} />
+        </TouchableWithoutFeedback>
+      }
+    </View >
+
+  }
+
+  async startPlay() {
+    this.sound.play();
+  }
+
+  async deleteRecording() {
+    this.setState({ previewRecording: false });
+    this.sound = null;
+    await RNFS.exists(this.state.recording)
+      .then((result) => {
+        console.log("file exists: ", result);
+
+        if (result) {
+          return RNFS.unlink(this.state.recording)
+            .then(() => {
+              console.log('FILE DELETED');
+            })
+            // `unlink` will throw an error, if the item to unlink does not exist
+            .catch((err) => {
+              console.log(err.message);
+            });
+        }
+
+      })
+      .catch((err) => {
+        console.log(err.message);
+      });
+  }
+
+  startRecording() {
+    AudioRecord.init(options);
+    this.setState({ isRecording: true, previewRecording: false });
+    AudioRecord.start();
+    console.log('start recording');
+  }
+
+  async stopRecording() {
+    this.setState({ isRecording: false, previewRecording: true });
+    const recording = await AudioRecord.stop();
+    this.setState({ recording });
+    this.sound = new Sound(recording, '', e => console.log(e));
+  }
+
+  async sendRecording() {
+    this.setState({ isRecording: false, previewRecording: false });
+    this.onSendButtonPress([{
+      audio: this.state.recording,
+      user: { _id: 1 },
+      _id: parseInt(Math.random() * 1000),
+    }]);
+
   }
 
   render() {
@@ -279,6 +504,9 @@ export default class App extends React.Component {
           <GiftedChat
             messages={state.messages}
             onSend={this.onSendButtonPress.bind(this)}
+            renderActions={this.renderActions.bind(this)}
+            renderSend={this.renderAudioRecording.bind(this)}
+            renderMessageAudio={this.renderMessageAudio.bind(this)}
             user={{ _id: 1 }}
           />
         </View>
