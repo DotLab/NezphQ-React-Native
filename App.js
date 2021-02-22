@@ -361,6 +361,7 @@ export default class App extends React.Component {
   renderMessageAudio(props) {
     // // sound.play()
     return <Icon type="FontAwesome" name="play" size={28}
+      style={{ backgroundColor: 'white' }}
       onPress={() => {
         const sound = new Sound(props.currentMessage.audio, '', e => {
           if (e) {
@@ -377,18 +378,11 @@ export default class App extends React.Component {
     />
   }
 
-
   renderAudioRecording(props) {
     return <View style={{ marginRight: 10, flexDirection: 'row' }}>
       <Send
         {...props}
       />
-      {/* {!props.text && this.state.recording &&
-        <TouchableOpacity style={{ marginRight: 20 }}
-          onPress={this.deleteFile.bind(this)}>
-          <Icon type="FontAwesome" name="trash" size={28} />
-        </TouchableOpacity>
-      } */}
       {!props.text && this.state.previewRecording &&
         <TouchableOpacity style={{ marginRight: 20 }}
           onPress={this.sendRecording.bind(this)}>
@@ -398,7 +392,8 @@ export default class App extends React.Component {
       {!props.text && this.state.previewRecording &&
         <TouchableOpacity
           onPress={this.startPlay.bind(this)}>
-          <Icon type="FontAwesome" name="play" size={28} />
+          {this.state.playingRecording ? <Icon type="FontAwesome" name="pause" size={28} />
+            : <Icon type="FontAwesome" name="play" size={28} />}
         </TouchableOpacity>
       }
 
@@ -406,7 +401,9 @@ export default class App extends React.Component {
         <TouchableWithoutFeedback
           onPressIn={this.startRecording.bind(this)}
           onPressOut={this.stopRecording.bind(this)}>
-          <Icon type="FontAwesome" name="microphone" size={28} />
+          <Icon type="FontAwesome" name="microphone" size={28}
+            style={{ color: this.state.isRecording ? 'blue' : 'black' }}
+          />
         </TouchableWithoutFeedback>
       }
     </View >
@@ -414,7 +411,10 @@ export default class App extends React.Component {
   }
 
   async startPlay() {
-    this.sound.play();
+    this.setState({ playingRecording: true });
+    this.sound.play(() => {
+      this.setState({ playingRecording: false });
+    });
   }
 
   async deleteRecording() {
@@ -434,7 +434,6 @@ export default class App extends React.Component {
               console.log(err.message);
             });
         }
-
       })
       .catch((err) => {
         console.log(err.message);
@@ -467,7 +466,7 @@ export default class App extends React.Component {
     this.onSendButtonPress([{
       audio: path,
       user: { _id: 1 },
-      _id: parseInt(Math.random() * 1000),
+      _id: messageId,
     }]);
 
   }
@@ -511,7 +510,6 @@ export default class App extends React.Component {
             renderActions={this.renderActions.bind(this)}
             renderSend={this.renderAudioRecording.bind(this)}
             renderMessageAudio={this.renderMessageAudio.bind(this)}
-            // renderBubble={this.renderBubble}
             user={{ _id: 1 }}
           />
         </View>
